@@ -1,0 +1,174 @@
+syntax = "proto3";
+
+message IwmNetworkCredentials {
+  string ssid = 1;
+  string password = 2;
+}
+
+message IwmServerCredentials {
+  string ip = 1;
+  string user = 2;
+  string password = 3;
+} 
+
+message IwmSensor {
+  string type = 1;
+  uint32 timing_max = 2;
+  uint32 timing_dim = 3;
+  uint32 light_max = 4;
+  uint32 light_dim = 5;
+}
+
+message IwmDevice {
+  uint64 id = 1;   /* mac address */
+  string name = 2;
+  string type = 3;
+  bool status = 4; /* status led */
+  uint32 layer_mesh = 5;
+  string hw_ver = 6;  
+  string sw_ver = 7;
+}
+
+message IwmMaster {
+  IwmDevice device = 1;
+  repeated IwmSensor sensor = 2;
+}
+
+message IwmLamp {
+  IwmDevice device = 1;
+  repeated uint64 master = 2; /* ID of connected devices */
+}
+
+message IwmMesh {
+  repeated IwmMaster master = 1;
+  repeated IwmLamp lamp = 2;
+}
+
+message IwmSetField {
+  uint64 id = 1;
+  string value = 2; // name
+}
+
+message IwmSetDevice {
+  uint64 id = 1; // lamp
+  uint64 device = 2; // master device
+}
+
+message IwmSetSensor {
+  uint64 id = 1; // master
+  IwmSensor sensor = 2;
+}
+
+enum IwmErrorType {
+  OK = 0;
+  TODO = 1;
+}
+
+message IwmDeviceStatus {
+  uint64 id = 1;
+  uint32 dim = 2;
+  uint32 error_msg = 3;
+  uint32 error_dev = 4;
+  oneof sensor_option {
+    uint64 sensor = 5; // for each device status each bit or Byte define the sensor parameter, tbd: matrix sensors/parameters
+  }
+}
+
+message IwmUpdate {
+  string device = 1;
+  uint32 date = 2;
+  uint32 version = 3;
+  bytes file = 4;
+}
+
+message IwmMeshDevice {
+  uint64 id = 1;
+  uint32 type = 2;
+  uint32 mesh_layer = 3;
+  string parent = 4;
+}
+
+enum IwmProtoMessageType {
+  NO_MESSAGE = 0;
+  /* START & STOP config, no payload */
+  START_CONFIG = 1;
+  STOP_CONFIG = 2;
+
+  /**  <device>_<SET/GET>_CONFIG : set/get configuration
+    *  <device>: - LAMP
+    *            - DEVICE -> proxy, sensoruhb, ecc..
+    *            - MESH   -> complete configuration
+    *
+    * SET : must have payload
+    * GET : if used to *receive* the configuration there is no payload,
+    *       if used to *send* there must be a payload
+    **/
+  /***  LAMP  ***/
+  LAMP_SET_CONFIG = 3;
+  LAMP_GET_CONFIG = 4;
+  /***  MASTER  ***/
+  MASTER_SET_CONFIG = 5;
+  MASTER_GET_CONFIG = 6;
+  /***  MESH  ***/
+  MESH_SET_CONFIG = 9;
+  MESH_GET_CONFIG = 10;
+
+  /**
+    * <network>_<SET/GET>_CREDENTIALS : set/get credentials
+    * <network> : - WIFI --> SOAP wifi, for router see ROUTER_SET_CREDENTIALS
+    *             - MESH
+    **/
+  /***  ssid & password wifi  ***/
+  WIFI_SET_CREDENTIALS = 11;
+  WIFI_GET_CREDENTIALS = 12;
+  /***  ssid & password mesh  ***/
+  MESH_SET_CREDENTIALS = 13;
+  MESH_GET_CREDENTIALS = 14;
+
+  /* set device name */
+  SET_NAME = 15;
+  /* set state light/led of device */
+  SET_STATE = 16;
+  /** set association between lamp and proxy/sensorhub
+    * this message type is only for LAMP device
+    **/
+  SET_ASSOCIATION = 17;
+  REMOVE_ASSOCIATION = 18;
+
+  SET_DIM = 19;
+
+  GET_DEVICE_STATUS = 20; /** request device status **/
+  SEND_DEVICE_STATUS = 21; /** devices send status **/
+
+  /** ota message **/
+  UPDATE = 22;
+
+  ROUTER_SET_CREDENTIALS = 23;
+  ROUTER_GET_CREDENTIALS = 24;
+  SERVER_SET_CREDENTIALS = 25;
+  SERVER_GET_CREDENTIALS = 26;
+
+  SENSOR_SET_CONFIG = 27;
+  LAMP_SEND_CONFIG = 28;
+  MASTER_SEND_CONFIG = 29;
+};
+
+message IwmProtoMessage {
+  IwmProtoMessageType type = 1;
+  oneof payload {
+    IwmMesh mesh = 2;
+    IwmLamp lamp = 3;
+    IwmMaster master = 4; //proxy, sensorhub, ecc..
+
+    IwmNetworkCredentials credentials = 6;
+    IwmServerCredentials server_credentials = 7;
+
+    IwmSetDevice association = 8;
+    IwmSetField field = 9;
+    uint32 dim = 10;
+
+    IwmDeviceStatus status = 12;
+
+    IwmSetSensor sensor = 13;
+  }
+}
